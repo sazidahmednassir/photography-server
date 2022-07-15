@@ -28,6 +28,7 @@ function verifyJWT(req, res, next) {
     return res.status(401).send({ message: "UnAuthorized access" });
   }
   const token = authHeader.split(" ")[1];
+  
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
     if (err) {
       return res.status(403).send({ message: "Forbidden access" });
@@ -58,23 +59,33 @@ async function run() {
       const result = await userCollection.updateOne(filter, updateDoc, options);
       const token = jwt.sign(
         { email: email },
-        process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: "1h" }
+        process.env.ACCESS_TOKEN_SECRET
+       
       );
       res.send({ result, token });
     });
 
-    app.put("/login", verifyJWT, async (req, res) => {
+    app.put("/login",  async (req, res) => {
       const user = req.query.user;
-      
-      const decodedEmail = req.decoded.email;
-      console.log(decodedEmail)
-    
-    
-      if (user === decodedEmail) {
+      const query= { email: req.query.user }
+      const token = jwt.sign(
+        { email: user },
+        process.env.ACCESS_TOKEN_SECRET
        
-        res.status(200).json({ success: true, email: user, token });
-      } else {
+      );
+      
+      // const decodedEmail = req.decoded.email;
+    
+      
+      const dbuser = await userCollection.findOne(query)
+      console.log(dbuser)
+    
+    
+      if (user==dbuser.email) {
+       
+        res.status(200).json({ success: true, email: user, token});
+      } 
+      else {
         res.status(403).send("wrong email");
       }
     });
